@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <title>Neon Runner 3D</title>
+
+    <style>
+
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+
+        #ui { position: absolute; top: 20px; left: 20px; color: #0f0; font-size: 24px; text-shadow: 0 0 10px #0f0; }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div id="ui">Score: 0</div>
+
+    <script type="module">
+
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+
+
+
+        // --- GAME CONFIG ---
+
+        let score = 0;
+
+        const obstacles = [];
+
+        const speed = 0.2;
+
+
+
+        // --- SCENE SETUP ---
+
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        document.body.appendChild(renderer.domElement);
+
+
+
+        // --- LIGHTING ---
+
+        const light = new THREE.PointLight(0xffffff, 1, 100);
+
+        light.position.set(0, 5, 5);
+
+        scene.add(light);
+
+        scene.add(new THREE.AmbientLight(0x404040));
+
+
+
+        // --- PLAYER (The Sphere) ---
+
+        const playerGeo = new THREE.SphereGeometry(0.5, 32, 32);
+
+        const playerMat = new THREE.MeshPhongMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.5 });
+
+        const player = new THREE.Mesh(playerGeo, playerMat);
+
+        player.position.y = 0.5;
+
+        scene.add(player);
+
+
+
+        // --- FLOOR ---
+
+        const floorGeo = new THREE.PlaneGeometry(10, 1000);
+
+        const floorMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+
+        floor.rotation.x = -Math.PI / 2;
+
+        scene.add(floor);
+
+
+
+        camera.position.z = 5;
+
+        camera.position.y = 3;
+
+        camera.lookAt(player.position);
+
+
+
+        // --- SPAWN OBSTACLES ---
+
+        function spawnObstacle() {
+
+            const obsGeo = new THREE.BoxGeometry(1, 1, 1);
+
+            const obsMat = new THREE.MeshPhongMaterial({ color: 0xff0055 });
+
+            const obs = new THREE.Mesh(obsGeo, obsMat);
+
+            obs.position.z = -50;
+
+            obs.position.x = (Math.random() - 0.5) * 8;
+
+            obs.position.y = 0.5;
+
+            scene.add(obs);
+
+            obstacles.push(obs);
+
+        }
+
+
+
+        setInterval(spawnObstacle, 1000);
+
+
+
+        // --- CONTROLS ---
+
+        window.addEventListener('mousemove', (e) => {
+
+            const x = (e.clientX / window.innerWidth) * 2 - 1;
+
+            player.position.x = x * 4;
+
+        });
+
+
+
+        // --- GAME LOOP ---
+
+        function animate() {
+
+            requestAnimationFrame(animate);
+
+
+
+            // Move obstacles toward player
+
+            obstacles.forEach((obs, index) => {
+
+                obs.position.z += speed;
+
+
+
+                // Collision Detection
+
+                if (player.position.distanceTo(obs.position) < 0.8) {
+
+                    score = 0; // Reset on hit
+
+                    document.getElementById('ui').innerHTML = "CRASHED! Score: 0";
+
+                }
+
+
+
+                // Cleanup
+
+                if (obs.position.z > 5) {
+
+                    scene.remove(obs);
+
+                    obstacles.splice(index, 1);
+
+                    score++;
+
+                    document.getElementById('ui').innerHTML = `Score: ${score}`;
+
+                }
+
+            });
+
+
+
+            renderer.render(scene, camera);
+
+        }
+
+
+
+        animate();
+
+
+
+        // Handle Resize
+
+        window.addEventListener('resize', () => {
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+        });
+
+    </script>
+
+</body>
+
+</html>
