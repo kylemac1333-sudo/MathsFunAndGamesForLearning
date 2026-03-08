@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neon Engine</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; color: #0ff; font-family: monospace; }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
+        .stat { font-size: 20px; margin-bottom: 5px; text-shadow: 0 0 10px #0ff; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div class="stat">SCORE: <span id="score-val">000000</span></div>
+        <div class="stat">TEMP: <span id="temp-val">30.0</span>°C</div>
+        <div class="stat">MULT: <span id="mult-val">1.0</span>x</div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    <script>
+        // Mock Audio/Log System to prevent errors from your snippet
+        const Audio = { log: (msg) => console.log(`[SYSTEM]: ${msg}`) };
+        const SETTINGS = { ACCELERATION: 0.001, MAX_SPEED: 2.0, OBSTACLE_CHANCE: 0.02 };
+
+        class NeonEngine {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(this.renderer.domElement);
+                
+                this.state = { active: true, clock: new THREE.Clock(), score: 0, speed: 0.8, highScore: localStorage.getItem('neon_high') || 0 };
+                this.playerGroup = new THREE.Group();
+                this.scene.add(this.playerGroup);
+            }
+
+            initWorld() {
+                const grid = new THREE.GridHelper(200, 50, 0xff00ff, 0x222222);
+                this.scene.add(grid);
+                const light = new THREE.DirectionalLight(0xffffff, 1);
+                light.position.set(0, 10, 10);
+                this.scene.add(light);
+            }
+
+            initPlayer() {
+                const geo = new THREE.BoxGeometry(1, 1, 1);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x00ffff });
+                this.player = new THREE.Mesh(geo, mat);
+                this.playerGroup.add(this.player);
+            }
+
+            initObstacleSystem() { this.obstacles = []; }
+            spawnThreat() { /* Placeholder for obstacle logic */ }
+            updateWorld() { /* Placeholder for movement logic */ }
+            checkCollisions() { /* Placeholder for hit detection */ }
+            updateFX() { /* Placeholder for visuals */ }
+
+            // Paste your provided snippet below
+            animate() {
+                if (!this.state.active) return;
+                requestAnimationFrame(() => this.animate());
+                const delta = this.state.clock.getDelta();
+                const time = this.state.clock.getElapsedTime();
+                this.updateWorld();
+                this.checkCollisions();
+                this.updateFX();
+                this.state.speed += SETTINGS.ACCELERATION;
+                if (this.state.speed > SETTINGS.MAX_SPEED) this.state.speed = SETTINGS.MAX_SPEED;
+                if (Math.random() < SETTINGS.OBSTACLE_CHANCE + (this.state.speed * 0.01)) {
+                    this.spawnThreat();
+                }
+                this.state.score += Math.floor(this.state.speed * 10);
+                this.updateUI();
+                this.camera.position.y = 5 + Math.sin(time * 2) * 0.1;
+                this.camera.lookAt(this.playerGroup.position.x * 0.3, 2, 0);
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            updateUI() {
+                document.getElementById('score-val').innerText = Math.floor(this.state.score).toString().padStart(6, '0');
+                const temp = 30 + (this.state.speed * 20) + Math.sin(Date.now() * 0.01);
+                document.getElementById('temp-val').innerText = temp.toFixed(1);
+                document.getElementById('mult-val').innerText = (1 + (this.state.speed - 0.8)).toFixed(1);
+            }
+
+            gameOver() {
+                this.state.active = false;
+                document.body.style.filter = "invert(1) hue-rotate(90deg)";
+                setTimeout(() => location.reload(), 1500);
+            }
+        }
+
+        const Game = new NeonEngine();
+        Game.initWorld();
+        Game.initPlayer();
+        Game.initObstacleSystem();
+        Game.animate();
+    </script>
+</body>
+</html>
