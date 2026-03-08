@@ -1,0 +1,322 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<title>Galaxy Engine Prototype</title>
+<style>
+body{margin:0;overflow:hidden;background:black;}
+#ui{position:absolute;top:10px;left:10px;color:white;font-family:monospace;}
+</style>
+</head>
+<body>
+
+<div id="ui">
+Mode: <span id="mode">SPACE</span><br>
+Credits: <span id="credits">100</span><br>
+Cargo: <span id="cargo">0</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+<script>
+
+////////////////////////////////////////////////
+// SCENE
+////////////////////////////////////////////////
+
+const scene=new THREE.Scene()
+
+const camera=new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+50000
+)
+
+const renderer=new THREE.WebGLRenderer({antialias:true})
+
+renderer.setSize(window.innerWidth,window.innerHeight)
+document.body.appendChild(renderer.domElement)
+
+////////////////////////////////////////////////
+// LIGHT
+////////////////////////////////////////////////
+
+scene.add(new THREE.AmbientLight(0x777777))
+
+const sun=new THREE.PointLight(0xffffff,2,20000)
+scene.add(sun)
+
+////////////////////////////////////////////////
+// STAR GALAXY
+////////////////////////////////////////////////
+
+const starGeo=new THREE.BufferGeometry()
+
+let starVerts=[]
+
+for(let i=0;i<12000;i++){
+
+starVerts.push(
+(Math.random()-0.5)*20000,
+(Math.random()-0.5)*20000,
+(Math.random()-0.5)*20000
+)
+
+}
+
+starGeo.setAttribute(
+"position",
+new THREE.Float32BufferAttribute(starVerts,3)
+)
+
+const stars=new THREE.Points(
+starGeo,
+new THREE.PointsMaterial({size:1})
+)
+
+scene.add(stars)
+
+////////////////////////////////////////////////
+// SHIP
+////////////////////////////////////////////////
+
+const ship=new THREE.Mesh(
+new THREE.ConeGeometry(1,4,8),
+new THREE.MeshStandardMaterial({color:0x00ffff})
+)
+
+ship.rotation.x=Math.PI/2
+scene.add(ship)
+
+let velocity=new THREE.Vector3()
+
+let credits=100
+let cargo=0
+
+////////////////////////////////////////////////
+// PLANET WITH ATMOSPHERE
+////////////////////////////////////////////////
+
+function createPlanet(){
+
+const planet=new THREE.Mesh(
+new THREE.SphereGeometry(80,64,64),
+new THREE.MeshStandardMaterial({color:0x3366ff})
+)
+
+planet.position.set(
+(Math.random()-0.5)*3000,
+(Math.random()-0.5)*1000,
+(Math.random()-0.5)*3000
+)
+
+scene.add(planet)
+
+////////////////////////////////////////////////
+// ATMOSPHERE
+////////////////////////////////////////////////
+
+const atmosphere=new THREE.Mesh(
+new THREE.SphereGeometry(85,64,64),
+new THREE.MeshBasicMaterial({
+color:0x66aaff,
+transparent:true,
+opacity:0.2
+})
+)
+
+planet.add(atmosphere)
+
+////////////////////////////////////////////////
+// CITY GENERATOR
+////////////////////////////////////////////////
+
+for(let i=0;i<30;i++){
+
+const building=new THREE.Mesh(
+new THREE.BoxGeometry(5,Math.random()*40+10,5),
+new THREE.MeshStandardMaterial({color:0x888888})
+)
+
+building.position.set(
+(Math.random()-0.5)*40,
+Math.random()*20,
+(Math.random()-0.5)*40
+)
+
+planet.add(building)
+
+}
+
+return planet
+
+}
+
+let planet=createPlanet()
+
+////////////////////////////////////////////////
+// ALIEN CREATURES
+////////////////////////////////////////////////
+
+let aliens=[]
+
+for(let i=0;i<10;i++){
+
+const alien=new THREE.Mesh(
+new THREE.SphereGeometry(3,16,16),
+new THREE.MeshStandardMaterial({color:0x00ff00})
+)
+
+alien.position.set(
+(Math.random()-0.5)*200,
+0,
+(Math.random()-0.5)*200
+)
+
+scene.add(alien)
+
+aliens.push(alien)
+
+}
+
+////////////////////////////////////////////////
+// SPACE STATION INTERIOR
+////////////////////////////////////////////////
+
+const station=new THREE.Mesh(
+new THREE.CylinderGeometry(20,20,40,16),
+new THREE.MeshStandardMaterial({color:0x999999})
+)
+
+station.position.set(-500,0,-200)
+scene.add(station)
+
+////////////////////////////////////////////////
+// GALAXY MAP OBJECT
+////////////////////////////////////////////////
+
+let galaxyPoints=[]
+
+for(let i=0;i<200;i++){
+
+let star=new THREE.Mesh(
+new THREE.SphereGeometry(3),
+new THREE.MeshBasicMaterial({color:0xffffff})
+)
+
+star.position.set(
+(Math.random()-0.5)*1000,
+(Math.random()-0.5)*1000,
+(Math.random()-0.5)*1000
+)
+
+galaxyPoints.push(star)
+
+}
+
+////////////////////////////////////////////////
+// INPUT
+////////////////////////////////////////////////
+
+let keys={}
+
+document.addEventListener("keydown",e=>{
+
+keys[e.key]=true
+
+if(e.key==="u" && credits>=50){
+
+credits-=50
+cargo+=10
+
+}
+
+})
+
+document.addEventListener("keyup",e=>{
+keys[e.key]=false
+})
+
+////////////////////////////////////////////////
+// UPDATE
+////////////////////////////////////////////////
+
+function update(){
+
+if(keys["w"]) velocity.z-=0.05
+if(keys["s"]) velocity.z+=0.05
+
+if(keys["a"]) ship.rotation.y+=0.05
+if(keys["d"]) ship.rotation.y-=0.05
+
+velocity.multiplyScalar(0.98)
+
+ship.translateZ(velocity.z)
+
+////////////////////////////////////////////////
+// CAMERA FOLLOW
+////////////////////////////////////////////////
+
+camera.position.lerp(
+new THREE.Vector3(
+ship.position.x,
+ship.position.y+8,
+ship.position.z+15
+),
+0.1
+)
+
+camera.lookAt(ship.position)
+
+////////////////////////////////////////////////
+// ALIEN AI
+////////////////////////////////////////////////
+
+for(let alien of aliens){
+
+alien.lookAt(ship.position)
+
+alien.translateZ(0.2)
+
+}
+
+document.getElementById("credits").innerText=credits
+document.getElementById("cargo").innerText=cargo
+
+}
+
+////////////////////////////////////////////////
+// LOOP
+////////////////////////////////////////////////
+
+function animate(){
+
+requestAnimationFrame(animate)
+
+update()
+
+renderer.render(scene,camera)
+
+}
+
+animate()
+
+////////////////////////////////////////////////
+// RESIZE
+////////////////////////////////////////////////
+
+window.addEventListener("resize",()=>{
+
+camera.aspect=window.innerWidth/window.innerHeight
+camera.updateProjectionMatrix()
+
+renderer.setSize(window.innerWidth,window.innerHeight)
+
+})
+
+</script>
+
+</body>
+</html>
+```
