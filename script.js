@@ -1,11 +1,28 @@
 const games = [
     {
         title: "Neon Engine",
-        url: "games/neon/index.html"
+        url: "games/neon/index.html",
+        description: "High-speed arcade survival."
     },
     {
         title: "No Mans Sky",
-        url: "games/nms/index.html"
+        url: "games/nms/index.html",
+        description: "Explore the galaxy. 🎮 Controls: W/S (Thrust), A/D (Turn), Space (Boost), F (Shoot), L (Land), G (Map), I (Station), U (Upgrade)"
+    },
+    {
+        title: "Neon Runner 3D",
+        url: "games/runner/index.html",
+        description: "Dodge obstacles in a neon world."
+    },
+    {
+        title: "Baldi's Basics",
+        url: "games/baldi/index.html",
+        description: "Can you escape the school?"
+    },
+    {
+        title: "Run 3",
+        url: "games/run3/index.html",
+        description: "Run through the space tunnel!"
     }
 ];
 
@@ -17,6 +34,7 @@ games.forEach(game => {
     card.className = 'game-card';
     card.innerHTML = `
         <h3>${game.title}</h3>
+        <p style="font-size: 12px; color: #aaa;">${game.description}</p>
         <button onclick="loadGame('${game.url}')">PLAY</button>
     `;
     grid.appendChild(card);
