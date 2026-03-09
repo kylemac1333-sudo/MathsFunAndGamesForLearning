@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0; background:#000; overflow:hidden;">
+<canvas id="g"></canvas>
+<script>
+const c=document.getElementById('g'), x=c.getContext('2d');
+let w,h, angle=0, bullets=[], enemies=[];
+function init(){ w=c.width=window.innerWidth; h=c.height=window.innerHeight; }
+window.addEventListener('resize', init); init();
+window.addEventListener('mousedown', ()=>bullets.push({a:angle, r:30}));
+window.addEventListener('mousemove', (e)=>angle=Math.atan2(e.clientY-h/2, e.clientX-w/2));
+function draw(){
+  x.fillStyle='rgba(0,0,0,0.2)'; x.fillRect(0,0,w,h);
+  x.strokeStyle='#0ff'; x.beginPath(); x.arc(w/2,h/2,30,0,7); x.stroke();
+  x.save(); x.translate(w/2,h/2); x.rotate(angle); x.fillStyle='#0ff'; x.fillRect(25,-5,15,10); x.restore();
+  bullets.forEach((b,i)=>{ b.r+=5; let px=w/2+Math.cos(b.a)*b.r, py=h/2+Math.sin(b.a)*b.r; x.fillStyle='#fff'; x.fillRect(px,py,4,4); if(b.r>w)bullets.splice(i,1); });
+  if(Math.random()<0.05) enemies.push({a:Math.random()*7, r:w/2});
+  enemies.forEach((e,i)=>{ e.r-=2; let px=w/2+Math.cos(e.a)*e.r, py=h/2+Math.sin(e.a)*e.r; x.fillStyle='#f0f'; x.beginPath(); x.arc(px,py,10,0,7); x.fill(); if(e.r<30)location.reload(); });
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
