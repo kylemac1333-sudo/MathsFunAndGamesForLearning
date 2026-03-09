@@ -1,0 +1,466 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<title>Subway Runner Ultimate</title>
+
+<style>
+body{
+margin:0;
+overflow:hidden;
+font-family:Arial;
+background:black;
+}
+
+#menu,#shop,#gameover{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+color:white;
+text-align:center;
+}
+
+#ui{
+position:absolute;
+top:10px;
+left:50%;
+transform:translateX(-50%);
+color:white;
+font-size:22px;
+display:none;
+}
+
+button{
+padding:10px 20px;
+margin:5px;
+font-size:18px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="menu">
+<h1>Subway Runner Ultimate</h1>
+<p>Top Score: <span id="topScore">0</span></p>
+<button onclick="startGame()">Start</button>
+<button onclick="openShop()">Shop</button>
+</div>
+
+<div id="shop" style="display:none">
+<h2>Shop</h2>
+<p>Hoverboard Upgrade - 50 coins</p>
+<button onclick="buyHover()">Buy</button>
+<button onclick="closeShop()">Back</button>
+</div>
+
+<div id="gameover" style="display:none">
+<h1>Game Over</h1>
+<button onclick="location.reload()">Restart</button>
+</div>
+
+<div id="ui">
+Score: <span id="score">0</span> |
+Coins: <span id="coins">0</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+<script>
+
+////////////////////////////////////////////////
+// SAVE SYSTEM
+////////////////////////////////////////////////
+
+let saveData = JSON.parse(localStorage.getItem("runnerSave")) || {
+topScore:0,
+coins:0,
+hoverUnlocked:false
+}
+
+document.getElementById("topScore").innerText = saveData.topScore
+
+function save(){
+localStorage.setItem("runnerSave",JSON.stringify(saveData))
+}
+
+////////////////////////////////////////////////
+// SHOP
+////////////////////////////////////////////////
+
+function openShop(){
+document.getElementById("menu").style.display="none"
+document.getElementById("shop").style.display="block"
+}
+
+function closeShop(){
+document.getElementById("shop").style.display="none"
+document.getElementById("menu").style.display="block"
+}
+
+function buyHover(){
+
+if(saveData.coins>=50){
+saveData.coins-=50
+saveData.hoverUnlocked=true
+save()
+alert("Hoverboard unlocked!")
+}
+
+}
+
+////////////////////////////////////////////////
+// SCENE
+////////////////////////////////////////////////
+
+const scene=new THREE.Scene()
+scene.background=new THREE.Color(0x87ceeb)
+
+const camera=new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+)
+
+const renderer=new THREE.WebGLRenderer({antialias:true})
+renderer.setSize(window.innerWidth,window.innerHeight)
+document.body.appendChild(renderer.domElement)
+
+////////////////////////////////////////////////
+// LIGHT
+////////////////////////////////////////////////
+
+scene.add(new THREE.AmbientLight(0xffffff,0.7))
+
+const sun=new THREE.DirectionalLight(0xffffff,1)
+sun.position.set(50,100,50)
+scene.add(sun)
+
+////////////////////////////////////////////////
+// LANES
+////////////////////////////////////////////////
+
+const lanes=[-4,0,4]
+let lane=1
+
+////////////////////////////////////////////////
+// PLAYER
+////////////////////////////////////////////////
+
+const player=new THREE.Mesh(
+new THREE.BoxGeometry(1,2,1),
+new THREE.MeshStandardMaterial({color:0xff4444})
+)
+
+player.position.set(0,1,6)
+
+scene.add(player)
+
+let velocityY=0
+let hoverboard=false
+let magnet=false
+
+////////////////////////////////////////////////
+// TRACK
+////////////////////////////////////////////////
+
+const ground=new THREE.Mesh(
+new THREE.PlaneGeometry(30,2000),
+new THREE.MeshStandardMaterial({color:0x333333})
+)
+
+ground.rotation.x=-Math.PI/2
+ground.position.z=-800
+
+scene.add(ground)
+
+////////////////////////////////////////////////
+// PROCEDURAL CITY
+////////////////////////////////////////////////
+
+for(let i=0;i<100;i++){
+
+let building=new THREE.Mesh(
+new THREE.BoxGeometry(10,Math.random()*60+20,10),
+new THREE.MeshStandardMaterial({color:0x666666})
+)
+
+building.position.set(
+Math.random()<0.5?-20:20,
+building.geometry.parameters.height/2,
+-i*40
+)
+
+scene.add(building)
+
+}
+
+////////////////////////////////////////////////
+// TRAINS
+////////////////////////////////////////////////
+
+let trains=[]
+
+function spawnTrain(){
+
+let train=new THREE.Mesh(
+new THREE.BoxGeometry(3,3,12),
+new THREE.MeshStandardMaterial({color:0x0088ff})
+)
+
+train.position.set(
+lanes[Math.floor(Math.random()*3)],
+1.5,
+-120
+)
+
+scene.add(train)
+trains.push(train)
+
+}
+
+////////////////////////////////////////////////
+// COINS
+////////////////////////////////////////////////
+
+let coins=[]
+let coinScore=0
+
+function spawnCoinTrail(){
+
+let laneIndex=Math.floor(Math.random()*3)
+
+for(let i=0;i<6;i++){
+
+let coin=new THREE.Mesh(
+new THREE.CylinderGeometry(0.5,0.5,0.2,16),
+new THREE.MeshStandardMaterial({color:0xffff00})
+)
+
+coin.rotation.x=Math.PI/2
+
+coin.position.set(lanes[laneIndex],1.5,-80-(i*4))
+
+scene.add(coin)
+coins.push(coin)
+
+}
+
+}
+
+////////////////////////////////////////////////
+// GAME STATE
+////////////////////////////////////////////////
+
+let score=0
+let running=false
+
+function startGame(){
+
+document.getElementById("menu").style.display="none"
+document.getElementById("ui").style.display="block"
+
+running=true
+
+}
+
+////////////////////////////////////////////////
+// UPDATE
+////////////////////////////////////////////////
+
+function update(){
+
+if(!running) return
+
+score++
+
+document.getElementById("score").innerText=score
+document.getElementById("coins").innerText=coinScore
+
+////////////////////////////////////////////////
+// PLAYER PHYSICS
+////////////////////////////////////////////////
+
+velocityY-=0.02
+player.position.y+=velocityY
+
+if(player.position.y<1){
+player.position.y=1
+velocityY=0
+}
+
+player.position.x+=(lanes[lane]-player.position.x)*0.2
+
+////////////////////////////////////////////////
+// SPAWN
+////////////////////////////////////////////////
+
+if(Math.random()<0.03) spawnTrain()
+if(Math.random()<0.05) spawnCoinTrail()
+
+////////////////////////////////////////////////
+// TRAINS
+////////////////////////////////////////////////
+
+for(let t of trains){
+
+t.position.z+=0.8
+
+if(
+Math.abs(t.position.z-player.position.z)<4 &&
+Math.abs(t.position.x-player.position.x)<2 &&
+!hoverboard
+){
+
+gameOver()
+
+}
+
+}
+
+////////////////////////////////////////////////
+// COINS
+////////////////////////////////////////////////
+
+for(let c of coins){
+
+c.position.z+=0.8
+c.rotation.y+=0.2
+
+let dist=Math.abs(c.position.x-player.position.x)
+
+if(magnet && dist<5){
+c.position.x+= (player.position.x-c.position.x)*0.1
+}
+
+if(
+Math.abs(c.position.z-player.position.z)<3 &&
+dist<2
+){
+
+coinScore++
+scene.remove(c)
+c.collected=true
+
+}
+
+}
+
+coins=coins.filter(c=>!c.collected)
+
+////////////////////////////////////////////////
+// CAMERA
+////////////////////////////////////////////////
+
+camera.position.lerp(
+new THREE.Vector3(
+player.position.x,
+player.position.y+6,
+player.position.z+12
+),
+0.1
+)
+
+camera.lookAt(player.position)
+
+}
+
+////////////////////////////////////////////////
+// GAME OVER
+////////////////////////////////////////////////
+
+function gameOver(){
+
+running=false
+
+saveData.coins+=coinScore
+
+if(score>saveData.topScore){
+saveData.topScore=score
+}
+
+save()
+
+document.getElementById("gameover").style.display="block"
+
+}
+
+////////////////////////////////////////////////
+// LOOP
+////////////////////////////////////////////////
+
+function animate(){
+
+requestAnimationFrame(animate)
+
+update()
+
+renderer.render(scene,camera)
+
+}
+
+animate()
+
+////////////////////////////////////////////////
+// INPUT
+////////////////////////////////////////////////
+
+document.addEventListener("keydown",e=>{
+
+if(e.key==="ArrowLeft" && lane>0) lane--
+if(e.key==="ArrowRight" && lane<2) lane++
+
+if(e.key==="ArrowUp" && player.position.y<=1.01){
+velocityY=0.45
+}
+
+if(e.key===" " && saveData.hoverUnlocked){
+hoverboard=true
+setTimeout(()=>hoverboard=false,4000)
+}
+
+if(e.key==="m"){
+magnet=!magnet
+}
+
+})
+
+////////////////////////////////////////////////
+// MOBILE SWIPE
+////////////////////////////////////////////////
+
+let startX=0
+
+window.addEventListener("touchstart",e=>{
+startX=e.touches[0].clientX
+})
+
+window.addEventListener("touchend",e=>{
+
+let endX=e.changedTouches[0].clientX
+
+if(endX-startX>50 && lane<2) lane++
+if(startX-endX>50 && lane>0) lane--
+
+})
+
+////////////////////////////////////////////////
+// RESIZE
+////////////////////////////////////////////////
+
+window.addEventListener("resize",()=>{
+
+camera.aspect=window.innerWidth/window.innerHeight
+camera.updateProjectionMatrix()
+
+renderer.setSize(window.innerWidth,window.innerHeight)
+
+})
+
+</script>
+</body>
+</html>
+```
