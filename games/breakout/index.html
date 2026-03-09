@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0; background:#111; overflow:hidden;">
+<canvas id="b"></canvas>
+<script>
+const c=document.getElementById('b'), x=c.getContext('2d');
+let w, h, px, bx, by, vx=4, vy=-4, bricks=[];
+function init(){
+  w=c.width=window.innerWidth; h=c.height=window.innerHeight; px=w/2-50; bx=w/2; by=h-60;
+  for(let i=0; i<5; i++) for(let j=0; j<10; j++) bricks.push({x:j*(w/10), y:i*30, v:1});
+}
+window.addEventListener('mousemove', (e)=>px=e.clientX-50);
+function draw(){
+  x.fillStyle='#111'; x.fillRect(0,0,w,h);
+  bx+=vx; by+=vy;
+  if(bx<0 || bx>w) vx*=-1; if(by<0) vy*=-1;
+  if(by>h-40 && bx>px && bx<px+100) vy*=-1;
+  if(by>h) init();
+  x.fillStyle='#0f0'; x.fillRect(px, h-30, 100, 10);
+  x.fillStyle='#fff'; x.beginPath(); x.arc(bx,by,8,0,7); x.fill();
+  bricks.forEach(b=>{ if(b.v){ x.fillStyle='#f0f'; x.fillRect(b.x+2, b.y+2, w/10-4, 26);
+    if(bx>b.x && bx<b.x+w/10 && by>b.y && by<b.y+30){ b.v=0; vy*=-1; } }
+  });
+  requestAnimationFrame(draw);
+}
+init(); draw();
+</script>
+</body>
+</html>
